@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="日々CRT"/>
+<meta name="theme-color" content="#f5f4f0"/>
+<title>日々CRT</title>
+<link rel="manifest" href="manifest.json"/>
+<link rel="icon" href="icon.svg" type="image/svg+xml"/>
+<link rel="apple-touch-icon" href="icon.svg"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#ffffff;--bg2:#f5f5f3;--bg3:#f5f4f0;
+  --text:#1a1a1a;--text2:#666660;--text3:#aaa9a3;
+  --border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.18);
+  --success:#1d9e75;
+  --radius:8px;--radius-lg:12px;
+}
+@media(prefers-color-scheme:dark){
+  :root{--bg:#1c1c1e;--bg2:#2c2c2e;--bg3:#3a3a3c;--text:#f0f0ee;--text2:#aaa9a3;--text3:#666660;--border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.2);}
+}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg3);min-height:100vh;color:var(--text);}
+.screen{display:none;padding:1.5rem 1rem 8rem;max-width:520px;margin:0 auto;}
+.screen.active{display:block;}
+#screen-card.active{display:flex;flex-direction:column;height:100vh;height:100dvh;padding:1.5rem 1rem 0;box-sizing:border-box;overflow:hidden;}
+
+.card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:1.25rem;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+#screen-card .card{flex:1;display:flex;flex-direction:column;min-height:0;margin-bottom:0;}
+.card-top{background:var(--bg2);border-bottom:0.5px solid var(--border);padding:0.75rem 1.25rem;display:flex;justify-content:space-between;align-items:center;flex:none;}
+.card-label{font-size:12px;color:var(--text3);font-weight:500;letter-spacing:0.05em;}
+.list-btn{background:none;border:0.5px solid var(--border2);border-radius:var(--radius);padding:3px 10px;font-size:11px;font-weight:500;font-family:'Noto Sans JP',sans-serif;color:var(--text2);cursor:pointer;}
+.card-date-row{padding:1.25rem 1.25rem 0;display:flex;align-items:baseline;gap:12px;flex:none;}
+.date-number{font-size:64px;font-weight:700;line-height:1;color:var(--text);}
+.weekday{font-size:13px;color:var(--text2);}
+.divider-h{height:0.5px;background:var(--border);margin:1rem 1.25rem 0;flex:none;}
+.card-body{padding:1rem 1.25rem 1.25rem;display:flex;flex-direction:column;gap:16px;}
+/* 固定エリア(日付・格言) */
+.card-body-fixed{padding:1rem 1.25rem 0;display:flex;flex-direction:column;gap:16px;flex:none;}
+/* スクロールエリア(メッセージ) */
+.card-body-scroll{padding:0.75rem 1.25rem 1.25rem;display:flex;flex-direction:column;justify-content:center;gap:16px;flex:1;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch;}
+
+/* 格言ブロック */
+.quote-block{border-left:3px solid var(--success);padding:10px 14px;background:var(--bg2);border-radius:0 var(--radius) var(--radius) 0;}
+.quote-text{font-size:15px;font-weight:500;color:var(--text);line-height:1.7;white-space:pre-wrap;word-break:break-all;}
+.quote-tag{font-size:10px;font-weight:700;border-radius:5px;padding:2px 7px;display:block;width:max-content;margin-top:6px;margin-left:auto;}
+
+/* メッセージブロック */
+.message-block{display:flex;flex-direction:column;gap:6px;margin-top:4px;}
+.message-body{font-size:14px;color:var(--text2);line-height:1.8;white-space:pre-wrap;word-break:break-all;}
+.message-author{font-size:12px;color:var(--text3);text-align:right;margin-top:2px;}
+
+.empty-msg{font-size:14px;color:var(--text3);font-style:italic;text-align:center;padding:2rem 0;}
+
+.btn-row{display:flex;gap:6px;flex:none;margin:0.75rem -1rem 0;padding:0.75rem 1rem;background:var(--bg3);border-top:0.5px solid var(--border);z-index:100;}
+.btn{flex:1;padding:12px 4px;font-size:12px;font-weight:700;font-family:'Noto Sans JP',sans-serif;border-radius:var(--radius-lg);cursor:pointer;text-align:center;border:none;line-height:1.5;}
+.btn-past{background:var(--bg);color:var(--text2);border:0.5px solid var(--border2);}
+.btn-future{background:var(--success);color:#fff;}
+.btn-today{background:var(--text);color:var(--bg);}
+.btn-disabled{background:var(--bg2);color:var(--text3);cursor:default;border:0.5px solid var(--border);}
+
+.comment-section{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1.25rem;}
+.comment-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px;}
+textarea{width:100%;min-height:80px;resize:vertical;font-family:'Noto Sans JP',sans-serif;font-size:14px;border:0.5px solid var(--border2);border-radius:var(--radius);padding:10px 12px;color:var(--text);background:var(--bg2);line-height:1.7;}
+textarea:focus{outline:none;border-color:var(--text2);}
+.char-count{font-size:11px;color:var(--text3);text-align:right;margin-top:4px;}
+.past-comments{display:flex;flex-direction:column;gap:8px;}
+.past-comment{background:var(--bg2);border-radius:var(--radius);padding:10px 12px;border:0.5px solid var(--border);}
+.past-comment-date{font-size:11px;color:var(--text3);margin-bottom:4px;}
+.past-comment-text{font-size:13px;color:var(--text2);line-height:1.7;white-space:pre-wrap;word-break:break-all;}
+.empty-note{font-size:13px;color:var(--text3);font-style:italic;}
+.save-badge{font-size:12px;color:var(--success);display:none;align-items:center;gap:4px;margin-top:8px;justify-content:center;}
+.save-dot{width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;}
+.btn-row-2{display:flex;gap:8px;}
+.btn-back{flex:1;padding:12px 0;font-size:14px;font-weight:500;font-family:'Noto Sans JP',sans-serif;background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--radius-lg);cursor:pointer;color:var(--text2);text-align:center;}
+.btn-save{flex:2;padding:12px 0;font-size:14px;font-weight:700;font-family:'Noto Sans JP',sans-serif;background:var(--success);color:#fff;border:none;border-radius:var(--radius-lg);cursor:pointer;text-align:center;}
+
+.reveal-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;gap:20px;}
+.reveal-card{width:120px;height:160px;border-radius:var(--radius-lg);background:var(--bg);border:0.5px solid var(--border);position:relative;display:flex;align-items:center;justify-content:center;animation:revealFlip 1.8s ease-in-out infinite;}
+.reveal-card::before{content:'';position:absolute;inset:10px;border:1.5px dashed var(--border2);border-radius:6px;}
+.reveal-card-icon{font-size:32px;opacity:0.5;}
+@keyframes revealFlip{0%,100%{transform:rotateY(0deg);}50%{transform:rotateY(180deg);}}
+.reveal-text{font-size:14px;color:var(--text2);font-weight:500;}
+.reveal-dots span{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--text3);margin:0 3px;animation:revealDot 1.4s ease-in-out infinite;}
+.reveal-dots span:nth-child(2){animation-delay:0.2s;}
+.reveal-dots span:nth-child(3){animation-delay:0.4s;}
+@keyframes revealDot{0%,80%,100%{opacity:0.25;transform:scale(0.8);}40%{opacity:1;transform:scale(1.1);}}
+
+.list-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;}
+.list-header-title{font-size:16px;font-weight:700;color:var(--text);}
+.add-btn{background:var(--text);color:var(--bg);border:none;border-radius:var(--radius);padding:8px 16px;font-size:13px;font-weight:700;font-family:'Noto Sans JP',sans-serif;cursor:pointer;}
+.list-grid{display:flex;flex-direction:column;gap:8px;}
+.list-item{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+.list-item-header{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;}
+.list-item-quote{font-size:13px;font-weight:500;color:var(--text);line-height:1.5;flex:1;}
+.list-item-tag{font-size:10px;font-weight:700;border-radius:5px;padding:2px 7px;display:inline-block;white-space:nowrap;flex-shrink:0;}
+.list-item-msg{font-size:12px;color:var(--text2);line-height:1.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:8px;}
+.list-item-actions{display:flex;gap:6px;}
+.icon-btn{background:none;border:0.5px solid var(--border2);border-radius:var(--radius);padding:5px 8px;font-size:12px;cursor:pointer;color:var(--text2);}
+.icon-btn.del{color:#c0392b;border-color:rgba(192,57,43,0.3);}
+
+.form-section{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;display:flex;flex-direction:column;gap:14px;}
+.form-label{font-size:13px;color:var(--text2);font-weight:500;margin-bottom:4px;display:block;}
+input[type=text]{width:100%;font-family:'Noto Sans JP',sans-serif;font-size:15px;border:0.5px solid var(--border2);border-radius:var(--radius);padding:9px 12px;color:var(--text);background:var(--bg2);}
+input[type=text]:focus{outline:none;border-color:var(--text2);}
+.tag-input-row{display:flex;gap:8px;}
+.tag-input-row input{flex:1;}
+.tag-add-btn{background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--radius);padding:9px 14px;font-size:13px;font-weight:500;font-family:'Noto Sans JP',sans-serif;cursor:pointer;color:var(--text2);white-space:nowrap;}
+.tags-list{display:flex;flex-wrap:wrap;gap:6px;}
+.tag-chip{font-size:11px;font-weight:700;border-radius:5px;padding:3px 10px;cursor:pointer;}
+.form-textarea{width:100%;min-height:80px;resize:vertical;font-family:'Noto Sans JP',sans-serif;font-size:14px;border:0.5px solid var(--border2);border-radius:var(--radius);padding:10px 12px;color:var(--text);background:var(--bg2);line-height:1.7;}
+.form-textarea:focus{outline:none;border-color:var(--text2);}
+
+.tag-color-0{background:#dbeafe;color:#1e40af;}
+.tag-color-1{background:#dcfce7;color:#166534;}
+.tag-color-2{background:#fce7f3;color:#9d174d;}
+.tag-color-3{background:#ede9fe;color:#5b21b6;}
+.tag-color-4{background:#ffedd5;color:#9a3412;}
+.tag-color-5{background:#e0f2fe;color:#075985;}
+.tag-color-6{background:#fef9c3;color:#854d0e;}
+.tag-color-7{background:#f0fdf4;color:#14532d;}
+</style>
+</head>
+<body>
+
+<div class="screen active" id="screen-card">
+  <div class="card">
+    <div class="card-top">
+      <span class="card-label" id="card-label">今日の言葉</span>
+      <button class="list-btn" onclick="goList()">一覧 ≡</button>
+    </div>
+    <div class="card-date-row">
+      <div class="date-number" id="card-date"></div>
+      <div class="date-sub"><div class="weekday" id="card-weekday"></div></div>
+    </div>
+    <div class="divider-h"></div>
+    <div class="card-body-fixed" id="card-body-quote"></div>
+    <div class="card-body-scroll" id="card-body-message"></div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-past" onclick="goPast()">過去からの<br>プレゼント</button>
+    <button class="btn btn-future" onclick="goFuture()">未来への<br>プレゼント</button>
+    <button class="btn btn-today" id="btn-today">今日の<br>言葉</button>
+  </div>
+</div>
+
+<div class="screen" id="screen-past">
+  <div class="card">
+    <div class="card-top"><span class="card-label">過去からのプレゼント</span></div>
+    <div class="card-body" id="past-card-body"></div>
+  </div>
+  <div class="comment-section">
+    <div class="comment-title">📝 過去のメモ</div>
+    <div class="past-comments" id="past-list"></div>
+  </div>
+  <div class="btn-row-2"><button class="btn-back" onclick="goBack()">← 戻る</button></div>
+</div>
+
+<div class="screen" id="screen-future">
+  <div class="card">
+    <div class="card-top"><span class="card-label">未来へのプレゼント</span></div>
+    <div class="card-body" id="future-card-body"></div>
+  </div>
+  <div class="comment-section">
+    <div class="comment-title">💬 今日の気づきをメモしよう</div>
+    <textarea id="futureTextarea" placeholder="感想・気づき・行動メモなど（200字以内）" maxlength="200" oninput="updateCount()"></textarea>
+    <div class="char-count" id="charCount">0 / 200</div>
+    <div class="save-badge" id="saveBadge"><span class="save-dot"></span>保存しました</div>
+  </div>
+  <div class="btn-row-2">
+    <button class="btn-back" onclick="goBack()">← 戻る</button>
+    <button class="btn-save" onclick="saveComment()">保存する</button>
+  </div>
+</div>
+
+<div class="screen" id="screen-reveal">
+  <div class="reveal-screen">
+    <div class="reveal-card"><div class="reveal-card-icon">💬</div></div>
+    <div class="reveal-text">今日の言葉をめくっています</div>
+    <div class="reveal-dots"><span></span><span></span><span></span></div>
+  </div>
+</div>
+
+<div class="screen" id="screen-list">
+  <div class="list-header">
+    <div class="list-header-title">格言一覧</div>
+    <button class="add-btn" onclick="goAdd()">＋ 追加</button>
+  </div>
+  <div style="margin-bottom:1rem;display:flex;gap:8px;">
+    <button class="btn-back" style="padding:8px 16px;font-size:13px;flex:none;display:inline-block;width:auto;" onclick="goBack()">← 戻る</button>
+    <button class="btn-back" style="padding:8px 16px;font-size:13px;flex:none;display:inline-block;width:auto;" onclick="exportData()">データをエクスポート</button>
+  </div>
+  <div id="export-panel" style="display:none;margin-bottom:1rem;">
+    <div class="form-label" style="margin-bottom:6px;">この内容を全選択してコピーし、Claudeに貼り付けてください</div>
+    <textarea id="export-area" class="form-textarea" readonly style="min-height:160px;font-size:11px;font-family:monospace;" onclick="this.select()"></textarea>
+  </div>
+  <div class="list-grid" id="list-grid"></div>
+</div>
+
+<div class="screen" id="screen-detail">
+  <div style="margin-bottom:1rem;">
+    <button class="btn-back" style="padding:8px 16px;font-size:13px;flex:none;display:inline-block;width:auto;" onclick="goList()">← 一覧へ戻る</button>
+  </div>
+  <div class="card">
+    <div class="card-top"><span class="card-label" id="detail-label"></span></div>
+    <div class="card-body" id="detail-card-body"></div>
+  </div>
+</div>
+
+<div class="screen" id="screen-form">
+  <div class="list-header">
+    <div class="list-header-title" id="form-title">格言を登録</div>
+  </div>
+  <div class="form-section">
+    <div>
+      <label class="form-label">格言（学びを一文で。改行も入力できます）</label>
+      <textarea class="form-textarea" id="input-quote" style="min-height:50px;" placeholder="例：思考をコントロールできる、もう一人の自分を育てられること"></textarea>
+    </div>
+    <div>
+      <label class="form-label">タグ</label>
+      <div class="tag-input-row">
+        <input type="text" id="input-tag-new" placeholder="新しいタグを入力"/>
+        <button class="tag-add-btn" onclick="addTag()">追加</button>
+      </div>
+      <div style="margin-top:8px;">
+        <div class="form-label" style="margin-bottom:6px;">既存のタグから選ぶ</div>
+        <div class="tags-list" id="existing-tags"></div>
+      </div>
+      <div style="margin-top:8px;">
+        <div class="form-label" style="margin-bottom:6px;">選択中のタグ</div>
+        <div class="tags-list" id="selected-tags"></div>
+      </div>
+    </div>
+    <div>
+      <label class="form-label">メッセージ本文</label>
+      <textarea class="form-textarea" id="input-msg-body" placeholder="格言への振り返り・気づき・エピソードなど…"></textarea>
+    </div>
+    <div>
+      <label class="form-label">氏名（任意）</label>
+      <input type="text" id="input-author" placeholder="例：田中"/>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:1rem;">
+    <button class="btn-back" onclick="goList()">キャンセル</button>
+    <button class="btn-save" onclick="saveQuote()">保存</button>
+  </div>
+</div>
+
+<script>
+const WEEKDAYS=['日曜日','月曜日','火曜日','水曜日','木曜日','金曜日','土曜日'];
+const QUOTES_KEY='quote_app_b_quotes_v5';
+const COMMENTS_KEY='quote_app_b_comments_v1';
+const TODAY_VIEWED_KEY='quote_app_b_today_viewed';
+const TAG_COLORS=['tag-color-0','tag-color-1','tag-color-2','tag-color-3','tag-color-4','tag-color-5','tag-color-6','tag-color-7'];
+let tagColorMap={};
+let editingIdx=-1;
+let selectedTag='';
+
+const today=new Date();today.setHours(0,0,0,0);
+const yesterday=new Date(today);yesterday.setDate(today.getDate()-1);
+function dateStr(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function dateLabel(d){return d.getFullYear()+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0');}
+const todayKey=dateStr(today);
+
+function loadQuotes(){try{return JSON.parse(localStorage.getItem(QUOTES_KEY)||'[]')||[];}catch(e){return[];}}
+function saveQuotes(q){localStorage.setItem(QUOTES_KEY,JSON.stringify(q));}
+function exportData(){
+  const quotes=loadQuotes();
+  const area=document.getElementById('export-area');
+  area.value=JSON.stringify(quotes,null,2);
+  document.getElementById('export-panel').style.display='block';
+  area.select();
+}
+function loadComments(){try{return JSON.parse(localStorage.getItem(COMMENTS_KEY)||'{}')||{};}catch(e){return{};}}
+function saveComments(c){localStorage.setItem(COMMENTS_KEY,JSON.stringify(c));}
+function todayViewed(){return localStorage.getItem(TODAY_VIEWED_KEY)===todayKey;}
+function markTodayViewed(){localStorage.setItem(TODAY_VIEWED_KEY,todayKey);}
+
+function seededRand(s){let x=Math.sin(s+1)*10000;return x-Math.floor(x);}
+function daysSinceEpoch(d){return Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/86400000);}
+function shuffledPermutation(n,cycleSeed){
+  const arr=Array.from({length:n},(_,i)=>i);
+  let seed=cycleSeed*99991+n*7919;
+  for(let i=n-1;i>0;i--){
+    seed+=1;
+    const j=Math.floor(seededRand(seed)*(i+1));
+    const tmp=arr[i];arr[i]=arr[j];arr[j]=tmp;
+  }
+  return arr;
+}
+function getQuoteForDay(d,quotes){
+  const n=quotes.length;
+  if(!n)return null;
+  const dayIndex=daysSinceEpoch(d);
+  const cycleNumber=Math.floor(dayIndex/n);
+  const posInCycle=((dayIndex%n)+n)%n;
+  const perm=shuffledPermutation(n,cycleNumber);
+  return perm[posInCycle];
+}
+
+function getTagColor(tag){
+  if(!tagColorMap[tag]){const used=Object.values(tagColorMap).length;tagColorMap[tag]=TAG_COLORS[used%TAG_COLORS.length];}
+  return tagColorMap[tag];
+}
+function rebuildTagColors(quotes){
+  tagColorMap={};const seen=new Set();
+  quotes.forEach(q=>{if(q.tag&&!seen.has(q.tag)){seen.add(q.tag);getTagColor(q.tag);}});
+}
+
+let currentIsToday=false;
+let currentQuoteIdx=null;
+
+function renderCardBody(bodyEl,quoteObj){
+  bodyEl.innerHTML='';
+  if(!quoteObj){
+    const e=document.createElement('div');e.className='empty-msg';
+    e.textContent='格言を登録してください（一覧 ≡ から追加できます）';
+    bodyEl.appendChild(e);return;
+  }
+  const qb=document.createElement('div');qb.className='quote-block';
+  const qt=document.createElement('div');qt.className='quote-text';qt.textContent=quoteObj.quote;
+  qb.appendChild(qt);
+  if(quoteObj.tag){const t=document.createElement('span');t.className='quote-tag '+getTagColor(quoteObj.tag);t.textContent=quoteObj.tag;qb.appendChild(t);}
+  bodyEl.appendChild(qb);
+  if(quoteObj.msgBody){
+    const dh=document.createElement('div');dh.style.cssText='height:0.5px;background:var(--border);margin:4px 0;';bodyEl.appendChild(dh);
+    const mb=document.createElement('div');mb.className='message-block';
+    const mby=document.createElement('div');mby.className='message-body';mby.textContent=quoteObj.msgBody;mb.appendChild(mby);
+    if(quoteObj.author){const au=document.createElement('div');au.className='message-author';au.textContent='— '+quoteObj.author;mb.appendChild(au);}
+    bodyEl.appendChild(mb);
+  }
+}
+
+function renderMainCardBody(quoteObj){
+  const qEl=document.getElementById('card-body-quote');
+  const mEl=document.getElementById('card-body-message');
+  qEl.innerHTML='';mEl.innerHTML='';
+  if(!quoteObj){
+    const e=document.createElement('div');e.className='empty-msg';
+    e.textContent='格言を登録してください（一覧 ≡ から追加できます）';
+    qEl.appendChild(e);return;
+  }
+  const qb=document.createElement('div');qb.className='quote-block';
+  const qt=document.createElement('div');qt.className='quote-text';qt.textContent=quoteObj.quote;
+  qb.appendChild(qt);
+  if(quoteObj.tag){const t=document.createElement('span');t.className='quote-tag '+getTagColor(quoteObj.tag);t.textContent=quoteObj.tag;qb.appendChild(t);}
+  qEl.appendChild(qb);
+  if(quoteObj.msgBody){
+    const mb=document.createElement('div');mb.className='message-block';
+    const mby=document.createElement('div');mby.className='message-body';mby.textContent=quoteObj.msgBody;mb.appendChild(mby);
+    if(quoteObj.author){const au=document.createElement('div');au.className='message-author';au.textContent='— '+quoteObj.author;mb.appendChild(au);}
+    mEl.appendChild(mb);
+  }
+}
+
+function showCardScreen(isToday){
+  currentIsToday=isToday;
+  const d=isToday?today:yesterday;
+  const quotes=loadQuotes();rebuildTagColors(quotes);
+  document.getElementById('card-label').textContent=isToday?'今日の言葉':'昨日の言葉';
+  document.getElementById('card-date').textContent=d.getDate();
+  document.getElementById('card-weekday').textContent=WEEKDAYS[d.getDay()];
+  currentQuoteIdx=getQuoteForDay(d,quotes);
+  renderMainCardBody(currentQuoteIdx!==null?quotes[currentQuoteIdx]:null);
+  const btn=document.getElementById('btn-today');
+  if(isToday||todayViewed()){btn.className='btn btn-disabled';btn.onclick=null;}
+  else{btn.className='btn btn-today';btn.onclick=goToday;}
+  showScreen('screen-card');
+}
+
+function goPast(){
+  const quotes=loadQuotes();rebuildTagColors(quotes);
+  renderCardBody(document.getElementById('past-card-body'),currentQuoteIdx!==null?quotes[currentQuoteIdx]:null);
+  const comments=loadComments();
+  const list=currentQuoteIdx!==null?(comments['q_'+currentQuoteIdx]||[]):[];
+  renderPastList(document.getElementById('past-list'),list);
+  showScreen('screen-past');
+}
+
+function goFuture(){
+  const quotes=loadQuotes();rebuildTagColors(quotes);
+  renderCardBody(document.getElementById('future-card-body'),currentQuoteIdx!==null?quotes[currentQuoteIdx]:null);
+  document.getElementById('futureTextarea').value='';updateCount();
+  document.getElementById('saveBadge').style.display='none';
+  showScreen('screen-future');
+}
+
+function goToday(){markTodayViewed();showScreen('screen-reveal');setTimeout(()=>showCardScreen(true),2200);}
+function goBack(){showCardScreen(currentIsToday);}
+
+function renderPastList(el,list){
+  el.innerHTML='';
+  if(!list.length){const n=document.createElement('div');n.className='empty-note';n.textContent='まだメモはありません';el.appendChild(n);return;}
+  list.slice().reverse().forEach(c=>{
+    const item=document.createElement('div');item.className='past-comment';
+    const d=document.createElement('div');d.className='past-comment-date';d.textContent=c.date;
+    const t=document.createElement('div');t.className='past-comment-text';t.textContent=c.text;
+    item.appendChild(d);item.appendChild(t);el.appendChild(item);
+  });
+}
+
+function updateCount(){
+  const len=document.getElementById('futureTextarea').value.length;
+  const el=document.getElementById('charCount');
+  el.textContent=len+' / 200';el.className='char-count'+(len>200?' over':'');
+}
+
+function saveComment(){
+  const text=document.getElementById('futureTextarea').value.trim();
+  if(!text||currentQuoteIdx===null){goBack();return;}
+  const comments=loadComments();
+  const key='q_'+currentQuoteIdx;
+  if(!comments[key])comments[key]=[];
+  comments[key].push({date:dateLabel(today),text});
+  saveComments(comments);
+  document.getElementById('saveBadge').style.display='flex';
+  setTimeout(()=>goBack(),800);
+}
+
+function goDetail(i){
+  const quotes=loadQuotes();
+  document.getElementById('detail-label').textContent='No.'+(i+1);
+  renderCardBody(document.getElementById('detail-card-body'),quotes[i]);
+  showScreen('screen-detail');
+}
+
+function goList(){
+  const quotes=loadQuotes();rebuildTagColors(quotes);
+  const grid=document.getElementById('list-grid');grid.innerHTML='';
+  if(!quotes.length){
+    const e=document.createElement('div');e.className='empty-msg';e.textContent='格言がまだ登録されていません';grid.appendChild(e);
+  } else {
+    quotes.forEach((q,i)=>{
+      const item=document.createElement('div');item.className='list-item';
+      const header=document.createElement('div');header.className='list-item-header';header.style.cursor='pointer';header.onclick=()=>goDetail(i);
+      const qt=document.createElement('div');qt.className='list-item-quote';qt.textContent=q.quote;
+      header.appendChild(qt);
+      if(q.tag){const t=document.createElement('span');t.className='list-item-tag '+getTagColor(q.tag);t.textContent=q.tag;header.appendChild(t);}
+      item.appendChild(header);
+      if(q.msgBody){
+        const msg=document.createElement('div');msg.className='list-item-msg';msg.style.cursor='pointer';msg.onclick=()=>goDetail(i);
+        msg.textContent=q.msgBody;
+        item.appendChild(msg);
+      }
+      const actions=document.createElement('div');actions.className='list-item-actions';
+      const viewBtn=document.createElement('button');viewBtn.className='icon-btn';viewBtn.textContent='閲覧';viewBtn.onclick=()=>goDetail(i);
+      const editBtn=document.createElement('button');editBtn.className='icon-btn';editBtn.textContent='編集';editBtn.onclick=()=>goEdit(i);
+      const delBtn=document.createElement('button');delBtn.className='icon-btn del';delBtn.textContent='削除';delBtn.onclick=()=>deleteQuote(i);
+      actions.appendChild(viewBtn);actions.appendChild(editBtn);actions.appendChild(delBtn);item.appendChild(actions);
+      grid.appendChild(item);
+    });
+  }
+  showScreen('screen-list');
+}
+
+function goAdd(){
+  editingIdx=-1;selectedTag='';
+  document.getElementById('form-title').textContent='格言を登録';
+  document.getElementById('input-quote').value='';
+  document.getElementById('input-tag-new').value='';
+  document.getElementById('input-msg-body').value='';
+  document.getElementById('input-author').value='';
+  renderFormTags();showScreen('screen-form');
+}
+
+function goEdit(i){
+  const quotes=loadQuotes();editingIdx=i;selectedTag=quotes[i].tag||'';
+  document.getElementById('form-title').textContent='格言を編集';
+  document.getElementById('input-quote').value=quotes[i].quote;
+  document.getElementById('input-tag-new').value='';
+  document.getElementById('input-msg-body').value=quotes[i].msgBody||'';
+  document.getElementById('input-author').value=quotes[i].author||'';
+  renderFormTags();showScreen('screen-form');
+}
+
+function renderFormTags(){
+  const quotes=loadQuotes();
+  const allTags=[...new Set(quotes.map(q=>q.tag).filter(Boolean))];
+  const existingEl=document.getElementById('existing-tags');existingEl.innerHTML='';
+  allTags.forEach(tag=>{
+    const chip=document.createElement('div');chip.className='tag-chip '+(selectedTag===tag?getTagColor(tag):'tag-color-0');
+    chip.textContent=tag;chip.style.opacity=selectedTag===tag?'1':'0.5';
+    chip.onclick=()=>{selectedTag=selectedTag===tag?'':tag;renderFormTags();};existingEl.appendChild(chip);
+  });
+  const selEl=document.getElementById('selected-tags');selEl.innerHTML='';
+  if(selectedTag){
+    const chip=document.createElement('div');chip.className='tag-chip '+getTagColor(selectedTag);
+    chip.textContent=selectedTag+' ✕';chip.onclick=()=>{selectedTag='';renderFormTags();};selEl.appendChild(chip);
+  } else {
+    const e=document.createElement('span');e.style.fontSize='12px';e.style.color='var(--text3)';e.textContent='タグ未選択';selEl.appendChild(e);
+  }
+}
+
+function addTag(){
+  const val=document.getElementById('input-tag-new').value.trim();
+  if(!val)return;selectedTag=val;getTagColor(val);
+  document.getElementById('input-tag-new').value='';renderFormTags();
+}
+
+function saveQuote(){
+  const quote=document.getElementById('input-quote').value.trim();
+  if(!quote){alert('格言を入力してください');return;}
+  const quotes=loadQuotes();
+  const entry={quote,tag:selectedTag,msgBody:document.getElementById('input-msg-body').value.trim(),author:document.getElementById('input-author').value.trim()};
+  if(editingIdx>=0){quotes[editingIdx]=entry;}
+  else{if(quotes.length>=100){alert('登録上限（100件）に達しています');return;}quotes.push(entry);}
+  saveQuotes(quotes);goList();
+}
+
+function deleteQuote(i){
+  if(!confirm('この格言を削除しますか？'))return;
+  const quotes=loadQuotes();quotes.splice(i,1);saveQuotes(quotes);goList();
+}
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');window.scrollTo(0,0);
+}
+
+
+const INITIAL_QUOTES=[{"quote": "前に進めるために使うモノ", "tag": "マインド", "msgBody": "一見説得力にかけるものを排除するのではなく、\n”寄り添った思考“を展開することで\n”良さを引き出す“余裕を持ちたい\n\n（実務への反映）\nこのご指摘は、ハッとさせられました。\n相手の意見、主張は否定しないように心がけるも、\n資料などで一見納得がいかない部分があると\n私なりの解釈で部下を指摘してしまうことがあります。\n\n背景にある事実を引き出してあげられる心の余裕と\n適切な問いかけの訓練を始めてみます。", "author": "松野"}, {"quote": "今どこにいて（スタート）、\nどこを目指すのか（ゴール）の両方を意識できること", "tag": "思考", "msgBody": "今回の講義において1番新鮮に感じた事は\n問題点を考える際、具体例を挙げていくのではなく\nイシューの設定から取り組む事です。\n\n今まで問題点や課題に対し具体的な対応策を無意識に考え、\n解決方法を導き出す事が自分の中で当たり前でした。\n\n何故なら問題の解決策(結論)を考えるという思考になっており、\n問題の本質に重きを置いていなかったからです。", "author": "久保"}, {"quote": "思考領域をもう一歩、もしくは二歩、広げられること", "tag": "思考", "msgBody": "課題「宝の山」で他の方の文章を読むことで、\n自分のクセが少し分かった。\n\n自分は、結論から入り、理由を伝えてはいるが、\n根拠・具体例が少ないため説得力に欠ける。\n\nまた、「もの」(製品)に対する意見が強い傾向がある。\n\n文章完成後も、もっと読み込み、\n「だから何？」による文章のブラッシュアップが必要だった。", "author": "金澤"}, {"quote": "違和感センサを大切にできること、多くの場合、大体あってる！\nすぐに答えがでなくてもメモっておこう", "tag": "思考", "msgBody": "感じたことある文章について、\n「どこかおかしい」と感じることはできるが、\n「何がおかしく」「なぜおかしい」のか説明することの難しさを\n演習2で感じました。\n\n今後の復習、授業を通して、\n論理的思考の構造を学ぶことでその点を改善できたらと思います。", "author": "山下"}, {"quote": "どう言語化するかが大切だとわかっていること", "tag": "伝える", "msgBody": "”言葉を煎じ詰める力”　や　”想像力”、が大事だな、\nと改めて感じました。\n\n演習の相互フィードバックを通じ、\n具体から抽象に昇華させるにあたっても言葉の取り方ひとつで\n全体構造が大きく違うな、という点が理解できました。\n\n他者の演習課題を拝見させていただき、\n参考になる言葉（ワーディング）は学んでいこうと思います。", "author": "上野"}, {"quote": "有限の資源の中で適切な情報を盛り込もうとできること。\nそれはできるだけ多く入れるということとは少し違う。", "tag": "伝える", "msgBody": "混ぜるな危険\n\n自分でもよくやってしまうことです。\nあれもこれも書きすぎてしまった場合は、\n読み返して修正出来るのですが、\n会話などでは修正することが出来ないので、\n\n講義中の「〇分で読む、伝える」\nという練習を普段も取り入れたいと思いました。", "author": "原口"}, {"quote": "構造が意識できること", "tag": "思考", "msgBody": "骨組みがしっかりしていれば、\nロジックの通ったイシューに即した議論ができる\n\n「海外赴任の推薦状」のワークでは、イシューと骨組みの意識が不十分な状態で書かれたと考えられる文章を読みました。突っ込みどころの多い文章に突っ込みを入れようという意識で見ていたため突っ込みができましたが、その前提がなくこの文章に接してすぐに同じ突っ込みができるかと問われると、その自信がありません。\n\n自身で思考する際に骨組み・枠組みが重要となることも理解しましたが、他者の意見に触れた際にもいったん冷静になりこの観点で考えることにより、その意見の問題点や優れた点に早く気付けることにもなると感じました。\n\n私がよくやりがちのことですが、解釈のつきにくい事項を相手に伝えるときに事実を羅列するようにまず説明して、反応をみつつ相手の考えに合うように意見を述べてしまう傾向があります。この対策として、解釈のつきにくい事項でもイシューと骨組みを意識してロジックを見通すことで妥当な解釈のできる事項が増えそうですし、相手に伝える際にも自分の意見・解釈を骨組みを意識して伝えることでより意図に即して伝えられるようになると思いました。今後は、これを実践していきたいと思います。", "author": "笠原"}, {"quote": "事象の解像度をあげると\n見えてくるものが変わることがわかっていること", "tag": "分析", "msgBody": "「海外のニュースをチェックしている」という内容に対して、\n直接的に推薦の理由として弱いと思われるものが書かれていた場合、\n\n実はもう少し掘り下げてヒアリングをすると、\n実際には「ビジネス関連のニュース」であったり、\n「チェックの頻度が高い」等、\n推薦理由に挙げることが出来る内容が\n含まれている可能性があるため、\n安易に切る判断をせずに要素の深堀が必要。", "author": "大塚"}, {"quote": "優しく接し、易しく理解するために\n自分でしっかり考えられること", "tag": "マインド", "msgBody": "授業の冒頭 Day1の振り返りにはなりますが松野さんの\n「相手の意見や主張は否定しないように心がける」\n「背景にある事実を引き出してあげられる心の余裕と適切な問いかけ」\nという言葉がとても印象に残りました。\n\nちょうど最近、ビジネスパートナーが\n頭に浮かんだことを次々と口にすることに対して、\n私自身が「否定するところから入る」ことが\n多くなっていたタイミングでもありました。\n\n相手の発言をすぐに否定するのではなく\n「なぜそう考えたのか」「その背景にあるもの」を\n一度受け止めて考えること。\n\nそのために自分自身の心の余裕や、\n相手に対するやさしい気持ちが大切なのだと\nすっと入ってきました。", "author": "西村"}, {"quote": "非効率な量から作られる質を大切にできること", "tag": "思考", "msgBody": "意見に高さを加える（頑張る）、とはどういうことか\n\n評価（その事実をどう捉えたか） → 影響（どうなる見込みか） → NextAction（何をすれば良い？）自分の意見がないと考え方は痩せる（共通点・相違点の答え合わせができると解釈が広がる）。\n\n先日参加した「志セミナー」でも、人間は人間に傷付けられることもあるが、人間は人間からしか学べない、というお話があり、そのとおりだなと感じました。\n\nAIがどれだけ進化しても、10年を1年に圧縮して学習することは不可能で、その10年は、人間が時間をかけて、泥臭く揉まれてきた、むしろ非効率な量から作れる質と感じるため、経験値というとシンプルな言葉になってしまいますが、様々な経験値・バックグラウンドを持った人間同士で、一つの事象・物事を多面的に議論することで、初めて思考は深まり、単なる知識から自身の手数へ昇華できるように思います。\n\nまた脱線しますが、先日、緒方洪庵の適塾を見てきましたが、予習では他人に聞いてはならぬ。辞書を引いて自力で考えよ、自分の考えを持って、会読（ひとつの書物を皆で読み、議論して理解を深める）に臨むこと、とあり、同じだなぁと感心しました。", "author": "村田"}, {"quote": "自分が関わっている価値は何かと問い続けられること、\n自分の「意見」はその価値の一つの候補になる！", "tag": "マインド", "msgBody": "自分の存在意義を伝え方で示す\n\nAIに聞けば多少のことはすぐ返ってくる今のような時代は特に、\n「自分の意見を持つということ」\n＝「ビジネスの場において自分が今ここにいる意義」、\nと改めて感じた。\n\n事実に対して自分なりの主張と自分なりの理由づけを\nセットにすることで、\n地に足をつけた議論ができるようになる。\nただ会議に呼ばれた人ではなく、\nあえて会議に呼んで意見を聞きたい人になる。", "author": "浦添"}, {"quote": "思考のレベルをひとつあげられること　\nそうすると見えてくるものが変わってくる", "tag": "思考", "msgBody": "中期事業計画を進める中で、\n策定時に設定した手段に固執してしまい、\n上司から「手段はあくまで達成するための手段。\n\n計画の実践と検証により現状にそぐわない点が見つかれば、\n達成に向けて、\n現在の課題に応じた改善策を改めて考える必要がある。」旨を\n何度か指摘されていました。\n\n「視野を広く持ち、物事の見方を広げること」と\n抽象度の高い指摘を何度か受けていますが、\n腹落ちする感覚がなく、十分に理解できていませんでしたが、\n講義を通じてそのような見方を知り、\n\n「上司はこういうことを言いたかったのかもしれない」\nと思うようになりました。", "author": "牧原"}, {"quote": "少し引いて遠くから眺めてみることができること", "tag": "思考", "msgBody": "まずは森を見てから木を見る\n１　全体がどうなっているかを大きく捉える\n　　（外側へ行く、足していく）、\n２　要素を分解して細部へ進む（内側へ行く、割る）、\n３　何を見るかを決めていくの流れを\n　　意識して行きたいと思いました。\n　\n分解するときは複数の切り口で考えることで見えるものが変わってくるため、全体を捉えて思考を働かせることで、見るものだけでなく見ないものを決めていくことができる（見ないところを意思をもって決めることができる）ということも学びになりました。\n\nイシューを考えるときと同様に、具体から入らず全体を捉えることを意識するためのトレーニングの必要性はDay2の講義からも感じました。直近の業務の中でも出会ったシチュエーションであり、細部から見てしまいそうになったところで、椅子を引いてみたり画面を遠くから見る動作を入れ、全体から見るための「自分自身のスイッチ」を意識してみました。", "author": "山崎"}, {"quote": "関係性を具体的に意識できること　\n全体/部分（範囲）、上下左右（空間）、\n具体/抽象（概念）、過去/未来（時間）など\nどういう関係性なのかを合せて考えてみよう", "tag": "思考", "msgBody": "相手にとっても自分にとっても\n物事を分かりやすくする「構造化」を、\n今後も日常的に取り入れていきたい\n\n情報を収集し、グルーピングしてラベルを付けるところまではある意味で作業であり、誰でも実施できますし、複雑で長い文章であるとAIの方が得意かもしれませんが、同じ情報を扱っていてもグルーピングの切り口は人によって異なり、その違いが非常に興味深く感じられました。私は平面的な分類はできても、「構造化する」ということが非常に苦手であると気付きました。そのため、受講後は仕事上の課題を中心に、さまざまなテーマを意識的に構造化して考えるよう取り組んでみました。構造化の過程では、まず目的やゴールを明確にし、それを達成するためのキークエスチョンを設定したうえで要素を分解していきます。ロジックツリーを作成することはできても、要素同士の関係性を整理したり、位置づけを変えて全体像を捉えたりすることは非常に難しいと感じました。\n\nしかし、その関係性を十分に説明できないということは、対象を本質的には理解できていないということでもあると思います。物事をより深く理解するためにも、今後はさらに思考を重ね、構造化する力を磨いていきたいと感じました。", "author": "笠井"}, {"quote": "外が意識できていることが\n結果的に中を強くすることがわかっていること", "tag": "思考", "msgBody": "まずは「森」からみる。\n次にどの「木」をみるのかも重要だが、\nどの「木」をみないのかも重要である\n\nこのミュージアム事業の演習では、\nやりがちな穴にすっぽりとハマってしまいました。\n最初に数字の内側部分にフォーカスを当てて\n検討に入ってしまいました。\n\n外側部分の森からみることで\n要点をおさえた分析や対策につなげることができる\nと感じました。\n\n特に「どの木をみないのか」という着眼点は\n目からウロコでした。\n実務でも意識してつなげたいと思います", "author": "堀田"}, {"quote": "先に進めるように間違えられること、\n何が違っていたかがわかれば、そこから前に思考が進められる", "tag": "マインド", "msgBody": "主張と事実を切り分けて事実と主張を埋める、理由付けが大事。\n\n「正しい」意見を持つことよりも、\n「正しく」意見を持ち議論が出来る状態にするというポイントに\n感銘を受けました。\n\nまた正しい意見よりも正しく意見をもつ、\n正しく間違うことも状況においては非常に重要と思いました。\n\n正しく間違って、\n何度も修正を繰り返して正しい道に進んでいくということを、\n今後のビジネス上でも更に意識していきたいなと思いました。", "author": "荒井"}, {"quote": "わからないなりに整理ができること", "tag": "思考", "msgBody": "実世界では必要な情報はぐちゃぐちゃになっている。\n可視化とは、それを問題解決プロセスに従って\nピックアップしながら整理していくという作業だと理解した", "author": "木下"}, {"quote": "スタートを少し丁寧に始められること　\nでも、少し考えてみないとわからなこともあるので、\n絶えず、アップデートすることも意識しておくこと", "tag": "思考", "msgBody": "問題解決でもイシューが重要\n\n優れた分析、問題解決手法を実施しても、\nそもそものイシューが間違っていると\n効果的な打ち手を実施出来ない。\n\n実務においてはイシューを言語化し、\n関係者と認識を合わせた上で分析を進める様に心がけたい。", "author": "新明"}, {"quote": "素直な発想も大切にできること", "tag": "分析", "msgBody": "プラネット社事例\n\n私は販管費に注目して大幅に外した回答をしてしまった。\n\n製造業では（或いは私のやって来た製品・ビジネスモデルでは）\n販管費に含まれる要素の多くは固定費なので、\n販管費は固定費と扱っていた。\n\nなので「サービスAとBの構成比逆転→原価率の悪化」に気づいた上で、「それより売上ＵＰに合わせて固定費の額も徒に上げていることの方が問題」と判断した。（勿論サービスＡがモデル単独ビジプラとして赤字モデルなら論外だが）\n\n素直に見れば「サービスＡ/Ｂの原価率の方がクリティカルな問題だよね」という発想にもなったとおもうので、業界常識や自分の経験に捉われずフラットに眼鏡屋のレポートは提出しようと思う。", "author": "塩谷"}, {"quote": "絶対と相対と両方で物事を捉えることができること", "tag": "分析", "msgBody": "出来なかったこと\n\nコストのうち原価と販管費のどちらに問題があるのかまで\n特定することができませんでした。\n売上に対する率を求めるという切り口が思いつかなかったこと、\nデータ分析の引き出しの少なさが原因です。", "author": "鈴木"}, {"quote": "物事の関係性を視覚的に表現してみようとできること", "tag": "分析", "msgBody": "フレームワークは「知る」だけでなく、\n使い分けるこれまで3Cや4Pなど、それぞれのフレームワークは\n単体では理解していたつもりでしたが、\n「いつ、どこで、何のために使うのか」が\nいまひとつつながっていませんでした。\n\n今回、まず3Cなどで全体を捉え、\nマーケティングに問題がありそうだと分かったら\n4Pでさらに分解する、というように、\nフレームワークを組み合わせて問題箇所を絞っていくイメージが\n少し見えたことが大きな学びでした。", "author": "水谷"}, {"quote": "どうすればいいのかの考え方をひとつずつでよいので\n思考の引き出しに入れていけること", "tag": "思考", "msgBody": "分解の仕方は\n外部要因・内部要因、フレームワーク、対の概念、プロセス…！\n\n左から分解していくといってもまずはどうやって？が\nずっとモヤモヤしてきたことでしたが、\n今回の授業でヒントをたくさんもらえて\n考え出していけそうな気になりました。\n\nこれを本当に実践できるか、レポートで力を試してみます。", "author": "菅野"}, {"quote": "視るためのグラフと魅せるためのグラフが使えること", "tag": "伝える", "msgBody": "文字より数字、数字より表、表よりグラフです。\n\n人は、一目で分かる内容を理解しやすいです。\n宿題について意見交換したとき、\nクラスメートの資料はとてもきれいで、\n初めて見る人でもすぐに内容を理解できました。\n\n読み手の立場から考えると、とても効率的であり、\n自分が伝えたいことも、\nより強く伝えられると思いました。", "author": "てい"}, {"quote": "映像化できるぐらい\n解像度があげられると強いとわかっていること", "tag": "思考", "msgBody": "Day1~4、そしてレポートの課題から得た学びや気付き、課題\n\n確証バイアスはかなりあり、なかなか離れられないので、\nハマっていないか問いかける癖をつけたい\n\n定量的なものより、定性的なものの広げ方に苦手意識がある。\nまずは、困ったら、先人の知恵とフレームワークに頼ることにする。\n\nイシューの再定義はOK。\nまた、脳裏に映像が鮮明に流れるくらい解像度を上げた方が\nそのあとが楽", "author": "平井"}, {"quote": "選ばないことで選ぶことができるとわかっていること", "tag": "思考", "msgBody": "今後、実務に活かして行くために具体的にするべきこと\n\n最後に、「ドキッ」としたことです。\nEG社の課題の初めに、「対策でやらないことを決める、\n今はこれだけやれば良い。これを言えるのはリーダーだけ」。\nとありました。\n\n仕事を沢山持っている後輩に対して、\n優先順位をつけた言い方ができていないと感じた次第です。", "author": "金澤"}, {"quote": "ずっとは大変だけど、\n要所要所で左（＝イシュー）を見ることができること", "tag": "思考", "msgBody": "左から考えるのクセが身についてきた一方で、\n分解（４H）し、そのたびにイシューを見直すというのが\nまだまだ甘い気がしています。\n\nまた、モヤ会で見えないものを決めることのやめ時などの\n判断もなかなか難しいものがあるなと思いました。\n\n自分なりにwhyのところになんとなくでたどり着いた後、\nすぐに打ち手（How）を考えていまいました。\nここではあらためて、\n40代・老舗メガネ店でなにが起こっているのか、\nイシューを明確にし、\n想像力を膨らます力と\n丁寧に考えることが大切だなと思いました。\n\nそのほかにもうまく３Cと４Pが使えておらず、\n左から考えることはできるようになってきたので\n適宜各FWも使えるようになりたいと思いました。", "author": "中間"}, {"quote": "慎重に飛びつけること！\n見たいものに専念できる環境が造れているかと考えてみよう", "tag": "マインド", "msgBody": "冒頭、確証性バイアスの話がありました。\n言葉としては聞いたことはありましたが、\nいかに恐ろしいものであるか思い知ったと思います。\n\n自分で「これだ！」思ったものに一度飛びついてしまうと、\nそれを抜け出る発想がしにくくなるということを\n大変恐ろしく感じました。\n\nイシューに対する取り組みとして、\n仮設を立てて検証する過程がありますが、\n冷静に真摯にイシューに向き合わなければ\n解釈・判断を誤ります。\n\n数字・データの深堀分析は好きで\nデータに隠れた事実を抽出するのは楽しいですが、\n私のクセで数字から読み解いた事実の解釈に\n不足・偏り・行き過ぎ・間違いをしばしば起こします。\nこれは、自分が見たいものを見てしまっている証と思います。", "author": "笠原"}, {"quote": "どこまで説明できるかを押さえることで\n何が足りないかもわかっていること。\nそれは、自分そして周りへの安心感につながります", "tag": "分析", "msgBody": "問題箇所を特定するためもしものパターンで穴埋め確認。\n\n問題箇所をどこまで説明できるのか、\n問題だと指摘するためには\n問題でない場合どうなるのかを考える。\n\n問題が残ればほかの原因あり、\n残らなければ問題箇所として断定できる。\n\n今までは問題箇所を特定する場合、\n他の要素と比べてどうかで判断していたが\n\n問題箇所がもし○○であれば(IF)どうか？という視点で\n問題箇所の観点を変えて考える重要性を知ることができた。", "author": "久保"}, {"quote": "思考の「体力」と「耐力」を鍛えていけること", "tag": "マインド", "msgBody": "思考の体力をつける\n\n上記で述べたとおり、\n特に「Why」「How」で課題に感じている部分が多いのですが、\n原因特定・解決策を考える際には、\n少し力尽きてしまっている感が否めないなと\nレポートを振り返って思いました。\n\nクリティカルに思考を巡らせることは疲れますが、\nどこかで「このくらいでいいや」と\n無意識のうちになってしまっていたのではないかと感じました。\n途中で力尽きることなく、\n最後まで構造的に考える体力をつけたいと感じました。\n\nそのためにも、場数がものを言うところもあるかと思うため、\n日頃から意識的に考える習慣を持ちます。", "author": "山下"}, {"quote": "80％でも十分な場合が多いとわかっていること", "tag": "マインド", "msgBody": "レポートに取り組む時間が十分に取れず、\n分析が甘いままになってしまっていたことを\n改めて痛感した回でした。\n\n中でも特に感じたこととして、\n①全体を疑うこと:\n提示された情報を鵜呑みにせず、\n反証となる要素をいくつかの角度から考え、選択肢を広げること\n\n②全てを網羅仕切ろうとしないこと:\n選択肢は出そうとすると無限に出てくる。\nその全てを網羅することはそんなに重要なことではない。", "author": "張"}, {"quote": "使う対象や状況を決めて、意識できること\n（そして、少しずつ対象や状況を広げていけばいい・・）", "tag": "思考", "msgBody": "今後、実務に活かしていくために具体的に何をするべきか\n自分の業務(海外製造拠点の管理・新規立ち上げ・輸出品管理)に落とし込むと、以下を意識していきたいと思います。\n\n・拠点への報告・提案時にピラミッドストラクチャーで構造化してから書く：現地スタッフや関係部署に伝える際、思いつきで書かず、先に構造を組んでから文章化する\n\n・生産・品質データを見る際は割合と実数を必ずセットで確認する：不良率などの割合だけでなく、実数での影響度も合わせて判断する\n\n・分析前に「見ない部分」を意識的に決めてから着手する：新規拠点立ち上げのように情報量が多い場面ほど、全部を細かく見ようとせず、切り口と見ない範囲を先に決める\n\n・「評価・解釈」で止めず「行動・提案」まで言い切る：拠点の状況報告でも、事実の解釈だけで終わらせず、次にどう動くべきかまで自分の意見として添える\n\n・主張の前に簡単でも仮説検証のステップを踏む：現地からの報告や自分の分析結果を鵜呑みにせず、仮説を立てて検証してから意見として伝える", "author": "鶴岡"}];
+function initSampleData(){
+  if(!localStorage.getItem(QUOTES_KEY)){
+    localStorage.setItem(QUOTES_KEY,JSON.stringify(INITIAL_QUOTES));
+  }
+}
+initSampleData();
+if(todayViewed()){showCardScreen(true);}else{showCardScreen(false);}
+</script>
+</body>
+</html>

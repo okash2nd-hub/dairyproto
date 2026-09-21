@@ -1,0 +1,19 @@
+{
+  "name": "日々CRT",
+  "short_name": "日々CRT",
+  "description": "自分で登録した格言を日替わりで届ける日めくりアプリ",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f4f0",
+  "theme_color": "#f5f4f0",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
